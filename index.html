@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pedidos Pendentes</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --border: #e4e8f0;
+    --text: #1a2332;
+    --text-soft: #5a6b85;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --success: #16a34a;
+    --success-soft: #dcfce7;
+    --warning: #f59e0b;
+    --warning-soft: #fef3c7;
+    --danger: #dc2626;
+    --danger-soft: #fee2e2;
+    --shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+    line-height: 1.5;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  /* Login screen */
+  .login-wrap {
+    min-height: calc(100vh - 48px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .login-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+    max-width: 380px;
+    width: 100%;
+  }
+  .login-card h1 { font-size: 22px; margin-bottom: 4px; }
+  .login-card .sub { color: var(--text-soft); font-size: 14px; margin-bottom: 24px; }
+  .login-card .logo { text-align: center; font-size: 40px; margin-bottom: 12px; }
+  .login-card .error {
+    background: var(--danger-soft);
+    color: var(--danger);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .login-card .error.show { display: block; }
+  .login-card .field { margin-bottom: 14px; }
+  .login-card button { width: 100%; padding: 12px; font-size: 15px; }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  h1 { font-size: 26px; font-weight: 700; }
+  h1 .icon { color: var(--primary); }
+  .subtitle { color: var(--text-soft); font-size: 14px; margin-top: 4px; }
+  .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+  .user-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    box-shadow: var(--shadow);
+  }
+  .tab {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-soft);
+    transition: all 0.15s;
+  }
+  .tab.active { background: var(--primary); color: white; }
+  .tab:hover:not(.active) { background: var(--bg); color: var(--text); }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+  .stat-label { font-size: 12px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .stat-value { font-size: 28px; font-weight: 700; margin-top: 4px; color: var(--text); }
+  .stat-value.primary { color: var(--primary); }
+  .stat-value.warning { color: var(--warning); }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .panel-title { font-weight: 600; font-size: 16px; }
+  .panel-body { padding: 20px; }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+  @media (max-width: 720px) { .form-grid { grid-template-columns: 1fr; } }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text-soft);
+  }
+  input, select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  .btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #15803d; }
+  .btn-ghost { background: transparent; color: var(--text-soft); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--bg); color: var(--text); }
+  .btn-danger { background: var(--danger-soft); color: var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: white; }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .search-box { position: relative; flex: 1; min-width: 200px; }
+  .search-box input { padding-left: 36px; }
+  .search-box::before {
+    content: "🔍";
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    opacity: 0.5;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--bg); }
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  th:hover { color: var(--text); }
+  th .sort-arrow { font-size: 10px; margin-left: 4px; opacity: 0.5; }
+  th.sorted .sort-arrow { opacity: 1; color: var(--primary); }
+  td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover { background: var(--bg); }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-soft); }
+  .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+  .empty-state .title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge-fardos { background: var(--warning-soft); color: #92400e; }
+  .badge-days { background: var(--bg); color: var(--text-soft); }
+  .badge-days.warning { background: var(--warning-soft); color: #92400e; }
+  .badge-days.danger { background: var(--danger-soft); color: var(--danger); }
+
+  .row-actions { display: flex; gap: 6px; }
+  .client-cell { font-weight: 600; }
+  .product-cell { color: var(--text-soft); }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--text);
+    color: white;
+    padding: 12px 18px;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    font-size: 14px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s;
+    z-index: 1000;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+  }
+  .modal h3 { font-size: 18px; margin-bottom: 8px; }
+  .modal p { color: var(--text-soft); margin-bottom: 20px; font-size: 14px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  .responsive-table-wrap { overflow-x: auto; }
+
+  #splash {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 9999;
+    color: var(--text-soft);
+  }
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .setup-banner {
+    background: var(--warning-soft);
+    border: 1px solid var(--warning);
+    color: #78350f;
+    padding: 16px 20px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+  .setup-banner h3 { margin-bottom: 6px; font-size: 15px; }
+  .setup-banner code {
+    background: rgba(0,0,0,0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="spinner"></div>
+  <div>Carregando...</div>
+</div>
+
+<!-- ====================== LOGIN SCREEN ====================== -->
+<div id="login-screen" style="display:none">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="logo">📦</div>
+      <h1 style="text-align:center">Pedidos Pendentes</h1>
+      <div class="sub" style="text-align:center">Entre com sua conta de administrador</div>
+      <div class="error" id="login-error"></div>
+      <form id="login-form" onsubmit="return doLogin(event)">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="username" placeholder="seu@email.com">
+        </div>
+        <div class="field">
+          <label for="password">Senha</label>
+          <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary" id="login-btn">Entrar</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== MAIN APP ====================== -->
+<div id="app" class="container" style="display:none">
+
+  <div id="setup-banner-wrap"></div>
+
+  <header>
+    <div>
+      <h1><span class="icon">📦</span> Pedidos Pendentes</h1>
+      <div class="subtitle">Gerencie pedidos pendentes de entrega</div>
+    </div>
+    <div class="header-right">
+      <div class="user-chip">
+        <span class="dot"></span>
+        <span id="user-email">admin</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sair</button>
+      <div class="tabs">
+        <button class="tab active" data-tab="abertos" onclick="switchTab('abertos')">Pendentes</button>
+        <button class="tab" data-tab="entregues" onclick="switchTab('entregues')">Entregues</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="panel" id="form-panel">
+    <div class="panel-header">
+      <div class="panel-title">➕ Novo pedido</div>
+    </div>
+    <div class="panel-body">
+      <form id="add-form" onsubmit="addOrder(event)">
+        <div class="form-grid">
+          <div class="field">
+            <label for="cliente">Cliente</label>
+            <input type="text" id="cliente" required placeholder="Ex: João da padaria" list="clientes-list">
+            <datalist id="clientes-list"></datalist>
+          </div>
+          <div class="field">
+            <label for="produto">Produto</label>
+            <input type="text" id="produto" required placeholder="Ex: Açúcar refinado" list="produtos-list">
+            <datalist id="produtos-list"></datalist>
+          </div>
+          <div class="field">
+            <label for="fardos">Fardos</label>
+            <input type="number" id="fardos" required min="1" step="1" placeholder="0">
+          </div>
+          <button type="submit" class="btn btn-primary" id="add-btn">Adicionar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title" id="list-title">Pedidos pendentes</div>
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="text" id="search" placeholder="Buscar cliente ou produto..." oninput="render()">
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📥 Exportar CSV</button>
+      </div>
+    </div>
+    <div class="responsive-table-wrap">
+      <table id="orders-table">
+        <thead>
+          <tr>
+            <th onclick="sortBy('cliente')" data-col="cliente">Cliente <span class="sort-arrow">▼</span></th>
+            <th onclick="sortBy('produto')" data-col="produto">Produto <span class="sort-arrow">▼</span></th>
+            <th onclick="sortBy('fardos')" data-col="fardos">Fardos <span class="sort-arrow">▼</span></th>
+            <th onclick="sortBy('data')" data-col="data">Data <span class="sort-arrow">▼</span></th>
+            <th id="status-col-header">Pendente há <span class="sort-arrow">▼</span></th>
+            <th style="text-align:right">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="orders-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <h3 id="confirm-title">Confirmar</h3>
+    <p id="confirm-text">Tem certeza?</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="confirm-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== SUPABASE + APP LOGIC ====================== -->
+<script type="module">
+  // =====================================================
+  // ⚙️  CONFIGURAÇÃO DO SUPABASE
+  // Substitua os 2 valores abaixo pelos do SEU projeto Supabase.
+  // Veja o README.md para o passo a passo.
+  // =====================================================
+  const SUPABASE_URL = "https://rdymzclgxwseupnuhcbf.supabase.co/rest/v1/";
+  const SUPABASE_ANON_KEY = "sb_publishable_yqpr3lEsSvfwAcl4f_LC4w_ibv9G5eI";
+  // =====================================================
+
+  import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+
+  const isConfigured = SUPABASE_URL && !SUPABASE_URL.startsWith("COLOQUE") &&
+                       SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.startsWith("COLOQUE");
+
+  let supabase = null;
+  let realtimeChannel = null;
+  let state = {
+    orders: [],
+    tab: 'abertos',
+    sort: { col: 'data', dir: 'desc' },
+    user: null
+  };
+  let confirmCallback = null;
+
+  // Expose to global
+  window.doLogin = doLogin;
+  window.doLogout = doLogout;
+  window.addOrder = addOrder;
+  window.markDelivered = markDelivered;
+  window.reopenOrder = reopenOrder;
+  window.deleteOrder = deleteOrder;
+  window.switchTab = switchTab;
+  window.sortBy = sortBy;
+  window.exportCSV = exportCSV;
+  window.closeModal = closeModal;
+  window.render = render;
+
+  function showSetupBanner() {
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = '';
+    document.getElementById('setup-banner-wrap').innerHTML = `
+      <div class="setup-banner">
+        <h3>⚙️ Configuração do Supabase necessária</h3>
+        <p>Abra o arquivo <code>index.html</code> e substitua <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code> pelos valores do seu projeto Supabase. Veja o <code>README.md</code> para o passo a passo.</p>
+      </div>
+    `;
+    document.querySelector('header').style.display = 'none';
+    document.getElementById('stats').style.display = 'none';
+    document.getElementById('form-panel').style.display = 'none';
+    const panels = document.querySelectorAll('.panel');
+    panels[panels.length - 1].style.display = 'none';
+  }
+
+  if (!isConfigured) {
+    showSetupBanner();
+  } else {
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+
+    // Auth state change listener
+    supabase.auth.onAuthStateChange((event, session) => {
+      document.getElementById('splash').style.display = 'none';
+      if (session && session.user) {
+        state.user = session.user;
+        document.getElementById('user-email').textContent = session.user.email;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = '';
+        fetchOrders();
+        subscribeRealtime();
+      } else {
+        state.user = null;
+        if (realtimeChannel) { supabase.removeChannel(realtimeChannel); realtimeChannel = null; }
+        document.getElementById('login-screen').style.display = '';
+        document.getElementById('app').style.display = 'none';
+      }
+    });
+
+    // Initial session check (triggers the listener above)
+    supabase.auth.getSession();
+  }
+
+  // ----------------- AUTH -----------------
+  async function doLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const errEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+    errEl.classList.remove('show');
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      document.getElementById('login-form').reset();
+    } catch (err) {
+      const msg = err.message || '';
+      let friendly = msg;
+      if (/invalid login credentials/i.test(msg)) friendly = 'Email ou senha incorretos.';
+      else if (/email not confirmed/i.test(msg)) friendly = 'Email ainda não confirmado. Veja o README sobre como desativar a confirmação ou confirme o email.';
+      else if (/network/i.test(msg)) friendly = 'Sem conexão com a internet.';
+      errEl.textContent = friendly;
+      errEl.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    }
+    return false;
+  }
+
+  async function doLogout() {
+    try {
+      await supabase.auth.signOut();
+      showToast('Sessão encerrada');
+    } catch (e) { console.error(e); }
+  }
+
+  // ----------------- DATA -----------------
+  async function fetchOrders() {
+    try {
+      const { data, error } = await supabase
+        .from('pedidos')
+        .select('*')
+        .order('data', { ascending: false });
+      if (error) throw error;
+      state.orders = (data || []).map(d => ({
+        id: d.id,
+        cliente: d.cliente,
+        produto: d.produto,
+        fardos: d.fardos,
+        data: d.data,
+        dataEntrega: d.data_entrega,
+        status: d.status || 'aberto'
+      }));
+      render();
+    } catch (err) {
+      console.error(err);
+      showToast('Erro ao carregar: ' + err.message);
+    }
+  }
+
+  function subscribeRealtime() {
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    realtimeChannel = supabase
+      .channel('pedidos-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'pedidos' },
+        () => fetchOrders()
+      )
+      .subscribe();
+  }
+
+  async function addOrder(e) {
+    e.preventDefault();
+    const cliente = document.getElementById('cliente').value.trim();
+    const produto = document.getElementById('produto').value.trim();
+    const fardos = parseInt(document.getElementById('fardos').value, 10);
+    if (!cliente || !produto || !fardos) return;
+    const btn = document.getElementById('add-btn');
+    btn.disabled = true;
+    try {
+      const { error } = await supabase.from('pedidos').insert([{
+        cliente, produto, fardos,
+        status: 'aberto',
+        data: new Date().toISOString(),
+        owner_id: state.user.id
+      }]);
+      if (error) throw error;
+      e.target.reset();
+      document.getElementById('cliente').focus();
+      showToast(`✅ Pedido de ${cliente} adicionado`);
+    } catch (err) {
+      console.error(err);
+      showToast('❌ ' + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function markDelivered(id) {
+    const o = state.orders.find(x => x.id === id);
+    if (!o) return;
+    showConfirm(
+      'Marcar como entregue?',
+      `Pedido de ${o.cliente}: ${o.fardos} fardo(s) de ${o.produto}. Será movido para "Entregues".`,
+      async () => {
+        try {
+          const { error } = await supabase.from('pedidos').update({
+            status: 'entregue',
+            data_entrega: new Date().toISOString()
+          }).eq('id', id);
+          if (error) throw error;
+          showToast(`✅ Marcado como entregue`);
+        } catch (err) { showToast('❌ ' + err.message); }
+      }
+    );
+  }
+
+  async function reopenOrder(id) {
+    try {
+      const { error } = await supabase.from('pedidos').update({
+        status: 'aberto',
+        data_entrega: null
+      }).eq('id', id);
+      if (error) throw error;
+      showToast(`↩️ Pedido reaberto`);
+    } catch (err) { showToast('❌ ' + err.message); }
+  }
+
+  async function deleteOrder(id) {
+    const o = state.orders.find(x => x.id === id);
+    if (!o) return;
+    showConfirm(
+      'Excluir pedido?',
+      `Esta ação não pode ser desfeita. Excluir pedido de ${o.cliente}?`,
+      async () => {
+        try {
+          const { error } = await supabase.from('pedidos').delete().eq('id', id);
+          if (error) throw error;
+          showToast(`🗑️ Pedido excluído`);
+        } catch (err) { showToast('❌ ' + err.message); }
+      }
+    );
+  }
+
+  // ----------------- UI -----------------
+  function switchTab(tab) {
+    state.tab = tab;
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.getElementById('form-panel').style.display = tab === 'abertos' ? '' : 'none';
+    document.getElementById('list-title').textContent = tab === 'abertos' ? 'Pedidos pendentes' : 'Pedidos entregues';
+    document.getElementById('status-col-header').innerHTML = tab === 'abertos'
+      ? 'Pendente há <span class="sort-arrow">▼</span>'
+      : 'Entregue em <span class="sort-arrow">▼</span>';
+    render();
+  }
+
+  function sortBy(col) {
+    if (state.sort.col === col) state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
+    else { state.sort.col = col; state.sort.dir = 'asc'; }
+    render();
+  }
+
+  function daysBetween(d1, d2) {
+    return Math.floor((new Date(d2) - new Date(d1)) / 86400000);
+  }
+  function formatDate(iso) {
+    if (!iso) return '-';
+    return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function render() {
+    renderStats();
+    renderTable();
+    renderDatalists();
+  }
+
+  function renderStats() {
+    const abertos = state.orders.filter(o => o.status === 'aberto');
+    const totalFardos = abertos.reduce((s, o) => s + o.fardos, 0);
+    const clientesUnicos = new Set(abertos.map(o => o.cliente.toLowerCase())).size;
+    const produtoMaisPedido = (() => {
+      const counts = {};
+      abertos.forEach(o => { counts[o.produto] = (counts[o.produto] || 0) + o.fardos; });
+      const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+      return sorted[0] || ['—', 0];
+    })();
+    document.getElementById('stats').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Pedidos pendentes</div>
+        <div class="stat-value primary">${abertos.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Fardos pendentes</div>
+        <div class="stat-value warning">${totalFardos}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Clientes esperando</div>
+        <div class="stat-value">${clientesUnicos}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Produto mais pedido</div>
+        <div class="stat-value" style="font-size:18px">${escapeHtml(produtoMaisPedido[0])} <span style="font-size:13px;color:var(--text-soft);font-weight:500">(${produtoMaisPedido[1]} fardos)</span></div>
+      </div>
+    `;
+  }
+
+  function renderTable() {
+    const search = document.getElementById('search').value.toLowerCase().trim();
+    let list = state.orders.filter(o => o.status === (state.tab === 'abertos' ? 'aberto' : 'entregue'));
+    if (search) {
+      list = list.filter(o =>
+        o.cliente.toLowerCase().includes(search) ||
+        o.produto.toLowerCase().includes(search)
+      );
+    }
+    const { col, dir } = state.sort;
+    list.sort((a, b) => {
+      let av = a[col], bv = b[col];
+      if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+      if (av == null) av = '';
+      if (bv == null) bv = '';
+      if (av < bv) return dir === 'asc' ? -1 : 1;
+      if (av > bv) return dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    document.querySelectorAll('th').forEach(th => {
+      th.classList.toggle('sorted', th.dataset.col === col);
+      const arrow = th.querySelector('.sort-arrow');
+      if (arrow && th.dataset.col === col) arrow.textContent = dir === 'asc' ? '▲' : '▼';
+    });
+    const tbody = document.getElementById('orders-body');
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">
+        <div class="emoji">${state.tab === 'abertos' ? '📭' : '📦'}</div>
+        <div class="title">${state.tab === 'abertos' ? 'Nenhum pedido pendente' : 'Nenhum pedido entregue ainda'}</div>
+        <div>${state.tab === 'abertos' ? 'Adicione novos pedidos no formulário acima' : 'Pedidos entregues aparecerão aqui'}</div>
+      </div></td></tr>`;
+      return;
+    }
+    const today = new Date();
+    tbody.innerHTML = list.map(o => {
+      const days = daysBetween(o.data, today);
+      const daysClass = days >= 7 ? 'danger' : days >= 3 ? 'warning' : '';
+      const daysLabel = days === 0 ? 'Hoje' : days === 1 ? '1 dia' : `${days} dias`;
+      const actionsAbertos = `
+        <button class="btn btn-success btn-sm" onclick="markDelivered('${o.id}')">✓ Entregue</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.id}')" title="Excluir">🗑️</button>
+      `;
+      const actionsEntregues = `
+        <button class="btn btn-ghost btn-sm" onclick="reopenOrder('${o.id}')">↩️ Reabrir</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.id}')" title="Excluir">🗑️</button>
+      `;
+      const statusCell = state.tab === 'abertos'
+        ? `<span class="badge badge-days ${daysClass}">${daysLabel}</span>`
+        : `<span class="badge badge-days">${formatDate(o.dataEntrega)}</span>`;
+      return `<tr>
+        <td class="client-cell">${escapeHtml(o.cliente)}</td>
+        <td class="product-cell">${escapeHtml(o.produto)}</td>
+        <td><span class="badge badge-fardos">${o.fardos} fardo${o.fardos > 1 ? 's' : ''}</span></td>
+        <td>${formatDate(o.data)}</td>
+        <td>${statusCell}</td>
+        <td><div class="row-actions" style="justify-content:flex-end">${state.tab === 'abertos' ? actionsAbertos : actionsEntregues}</div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderDatalists() {
+    const clientes = [...new Set(state.orders.map(o => o.cliente))].sort();
+    const produtos = [...new Set(state.orders.map(o => o.produto))].sort();
+    document.getElementById('clientes-list').innerHTML = clientes.map(c => `<option value="${escapeHtml(c)}">`).join('');
+    document.getElementById('produtos-list').innerHTML = produtos.map(p => `<option value="${escapeHtml(p)}">`).join('');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  }
+  function showConfirm(title, text, cb) {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-text').textContent = text;
+    confirmCallback = cb;
+    document.getElementById('confirm-modal').classList.add('show');
+  }
+  function closeModal() {
+    document.getElementById('confirm-modal').classList.remove('show');
+    confirmCallback = null;
+  }
+  document.getElementById('confirm-ok').addEventListener('click', () => {
+    if (confirmCallback) confirmCallback();
+    closeModal();
+  });
+  document.getElementById('confirm-modal').addEventListener('click', e => {
+    if (e.target.id === 'confirm-modal') closeModal();
+  });
+
+  function exportCSV() {
+    const list = state.orders.filter(o => o.status === (state.tab === 'abertos' ? 'aberto' : 'entregue'));
+    if (list.length === 0) { showToast('Nada para exportar'); return; }
+    const header = ['Cliente','Produto','Fardos','Data do pedido','Status','Data entrega'];
+    const rows = list.map(o => [o.cliente, o.produto, o.fardos, formatDate(o.data), o.status, formatDate(o.dataEntrega)]);
+    const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pedidos-${state.tab}-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📥 CSV exportado');
+  }
+</script>
+
+</body>
+</html>
